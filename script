@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+#Written by patfuech
+# Version 1.0
+
+import subprocess
+import os
+
+def is_scan_completed(nmap_output_file):
+    try:
+        with open(nmap_output_file, 'r') as file:
+            for line in file:
+                if "# Nmap done" in line:
+                    return True
+    except FileNotFoundError:
+        pass  # File doesn't exist, so the scan is definitely not completed
+
+    return False
+
+def run_nmap_for_subnet(subnet, output_dir, base_name):
+    # Use the same output file for all subnets
+    nmap_output_base = os.path.join(output_dir, base_name)
+    nmap_output_file = nmap_output_base + ".nmap"
+
+    # Check if the scan for this specific subnet is already completed in the output file
+    if not is_scan_completed(nmap_output_file):
+        # Run the nmap command, appending the results to the existing output files
+        nmap_command = [
+            "nmap", "-sS", "-Pn",
+            "--min-hostgroup", "256", "-T2",
+            "--max-retries", "2", "--host-timeout", "2m",
+            "-oA", nmap_output_base, "-vvv", "-p-", subnet
+        ]
+        # Run the nmap command and append the results
+        with open(nmap_output_file, 'a') as outfile:
+            subprocess.run(nmap_command, stdout=outfile, stderr=subprocess.STDOUT, check=True)
+
+def run_nmap(subnets_file_path, output_base_directory, location, base_name):
+    subnets_file_path = os.path.expanduser(subnets_file_path)
+    output_base_directory = os.path.expanduser(output_base_directory)
+    os.makedirs(output_base_directory, exist_ok=True)
+    output_dir = os.path.join(output_base_directory, location)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    with open(subnets_file_path, 'r') as file:
+        subnets = file.readlines()
+        for subnet in subnets:
+            subnet = subnet.strip()
+            run_nmap_for_subnet(subnet, output_dir, base_name)
+
+def main():
+    subnets_file_path = "/home/userprofilename/Blom_Luden.txt"
+    output_base_directory = "~/OT_scan"
+    location = "Blom_Luden"
+    base_name = "Blom_Luden_scan"
+    run_nmap(subnets_file_path, output_base_directory, location, base_name)
+
+if __name__ == "__main__":
+    main()
